@@ -720,6 +720,9 @@ def varparse(com):
 
 	return " ".join(line)
 
+def update():
+	subprocess.check_output("git pull", shell=True)
+
 def cat(var0, var1):
 	return str(var0) + str(var1)
 
@@ -813,6 +816,10 @@ def parse_com(com, module, current):
 
 			return module
 
+	
+	#DON'T ADD COMMANDS BEFORE THESE TWO
+	#TALOS AND COMMENTS COME FIRST
+
 	#talos
 	#pass to high level interpreter from within module
 	if com.strip().lower().split()[0] == "talos":
@@ -820,6 +827,12 @@ def parse_com(com, module, current):
 
 	#comments
 	if com[0] == "#":
+		return module
+
+	
+	#update
+	if com.strip().lower() == "update":
+		update()
 		return module
 
 

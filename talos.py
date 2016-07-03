@@ -10,6 +10,7 @@ import time
 import threading
 import signal
 import shlex
+import subprocess
 
 from twisted.internet import reactor
 from core.backbone import _exec

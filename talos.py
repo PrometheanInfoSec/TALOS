@@ -87,8 +87,9 @@ def print_help():
 	print "#  99) exit"
 
 def check_updates():
-	a = subprocess.check_output("git fetch --dry-run", shell=True)
-	if len(a) > 3:
+	a, b = subprocess.Popen("git fetch --dry-run", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+	
+	if len(b) > 3:
 		print "Your version of TALOS is out of date."
 		print "Please update at your earliest opportunity."
 

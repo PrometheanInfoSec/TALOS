@@ -85,6 +85,12 @@ def print_help():
 	print "#     A) invoke <filename>"
 	print "#  99) exit"
 
+def check_updates():
+	a = subprocess.check_output("git fetch --dry-run")
+	if len(a) > 3:
+		print "Your version of TALOS is out of date."
+		print "Please update at your earliest opportunity."
+
 def list_modules():
 	print "Available modules"
 	
@@ -1177,6 +1183,7 @@ if __name__ == "__main__":
 	module = 'TALOS'
 	module_history = ["TALOS"]
 	print_banner()
+	check_updates()
 	if args.script:
 		read_loop(args.script)
 	else:

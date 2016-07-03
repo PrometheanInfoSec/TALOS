@@ -722,7 +722,9 @@ def varparse(com):
 	return " ".join(line)
 
 def update():
-	subprocess.check_output("git pull", shell=True)
+	a,b = subprocess.Popen("git pull", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+	print "TALOS updated"
+	print "Please restart TALOS"
 
 def cat(var0, var1):
 	return str(var0) + str(var1)

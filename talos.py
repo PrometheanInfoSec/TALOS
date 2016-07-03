@@ -84,6 +84,7 @@ def print_help():
 	print "#     A) purge log"
 	print "#  9) invoke"
 	print "#     A) invoke <filename>"
+	print "#  10) update"
 	print "#  99) exit"
 
 def check_updates():

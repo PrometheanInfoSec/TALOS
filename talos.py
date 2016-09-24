@@ -1250,6 +1250,15 @@ if __name__ == "__main__":
 	if args.script:
 		read_loop(args.script)
 	else:
-		read_loop()
+		while True:
+			try:
+				read_loop()
+			except KeyboardInterrupt:
+				print "Received Interrupt Signal"
+				print "Would like to exit?"
+				rea = raw_input("[Y/n]>>> ")
+				if rea.lower() == "y" or rea.lower()=="yes":
+					print "Exiting.. "
+					exit()
+			
 
-	

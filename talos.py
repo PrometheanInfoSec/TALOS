@@ -36,8 +36,11 @@ ifstate = None
 lastout = None
 pausetime = 0.1
 
+log_transcript = True
+transcript = []
 
 def print_banner():
+	subprocess.call("clear", shell=True)
 	banner = """\n\n
 ####################################################
 ####################################################
@@ -721,6 +724,23 @@ def varparse(com):
 
 	return " ".join(line)
 
+def transcript_write(filename):
+	if filename == "!justprint!":
+		print "\n".join(transcript[:len(transcript)-1])
+		return
+	
+	if os.path.exists(filename):
+		print "This file already exists"
+		print "Cannot write out transcript"
+		return
+	
+	
+	fi = open(filename, "w")
+	fi.write("\n".join(transcript[:len(transcript)-1])+"\n")
+	fi.close()
+	print 'Transcript written out to file: %s' % filename
+	return
+
 def update():
 	a,b = subprocess.Popen("git pull", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
 	print "TALOS updated"
@@ -787,6 +807,8 @@ def conditionparse(com):
 
 def parse_com(com, module, current):
 	global lastout
+	if log_transcript:
+		transcript.append(com)
 
 	com = comparse(com, module, current)
 	com = varparse(com)
@@ -838,6 +860,19 @@ def parse_com(com, module, current):
 		update()
 		return module
 
+
+	#transcript without argument
+	if com.strip().lower() == "transcript":
+		print "Need to supply an output file"
+		print "transcript <filename>"
+		print "OR to just print"
+		print "transcript !justprint!"
+		return module
+
+	#transcript
+	if len(com.strip().lower().split()) == 2 and com.strip().lower().split()[0] == "transcript":
+		transcript_write(com.strip().lower().split()[1])
+		return module
 
 	#del <var>
 	if len(com.strip().lower().split()) == 2 and com.strip().lower().split()[0] == "del":
@@ -1188,6 +1223,7 @@ if __name__ == "__main__":
 	
 	parser = argparse.ArgumentParser()
 	parser.add_argument("-s","--script", help="A script file to run")
+	parser.add_argument("-nt","--no-transcript", action='store_true', help="Do not track the session transcript, for whatever reason")
 	args = parser.parse_args()
 	
 	t = threading.Thread(target=mon_log, args=("notify.log",))
@@ -1202,7 +1238,13 @@ if __name__ == "__main__":
 	module_history = ["TALOS"]
 	print_banner()
 	check_updates()
+	
+	if args.no_transcript:
+		log_transcript = False
+
 	if args.script:
 		read_loop(args.script)
 	else:
 		read_loop()
+
+	

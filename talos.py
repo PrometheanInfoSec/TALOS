@@ -743,8 +743,13 @@ def transcript_write(filename):
 
 def update():
 	a,b = subprocess.Popen("git pull", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
-	print "TALOS updated"
-	print "Please restart TALOS"
+	if not "Already up-to-date." in a:
+		print a
+		print
+		print "TALOS updated"
+		print "Please restart TALOS"
+	else:
+		print "Already up-to-date."
 
 def cat(var0, var1):
 	return str(var0) + str(var1)

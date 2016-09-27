@@ -500,7 +500,8 @@ def help_command(command):
 			'read':'read a variable',
 			'read notifications':'read unread notifications',
 			'read old':'read all notifications in notify.log',
-			'invoke <filename>':'invoke the script located at <filename>'
+			'invoke <filename>':'invoke the script located at <filename>',
+			'invoke <filename> <optional::argv1> <optional::argv2> etc..':'Invoke the script <filename> with as many arguments as are specified in the script.'
 			}
 
 	if command in help_texts:
@@ -951,8 +952,13 @@ def parse_com(com, module, current):
 		return module
 
 	#invoke
-	if len(com.strip().lower().split()) == 2 and com.strip().lower().split()[0] == "invoke":
-		module = read_loop(filename=com.strip().lower().split()[1], doreturn=True)
+	if len(com.strip().lower().split()) >= 2 and com.strip().lower().split()[0] == "invoke":
+		
+		targv = None
+		if len(com.strip().lower().split()) > 2:
+			targv = com.strip().lower().split()[2:]
+
+		module = read_loop(filename=com.strip().lower().split()[1], doreturn=True, argv=targv)
 		return module
 
 	#list
@@ -1161,7 +1167,7 @@ def dec(var):
 		return False
 
 
-def read_loop(filename="", doreturn=False):
+def read_loop(filename="", doreturn=False, argv=None):
 	global module
 	global module_history
 	global current
@@ -1178,6 +1184,17 @@ def read_loop(filename="", doreturn=False):
 		except:
 			print "Found no script by that name"
 			return
+		if argv != None and type(argv) == list:
+			for i in xrange(len(argv)):
+				varr = "$"+str(i+1)
+				print "Replacement: ", str(argv[i])
+
+				data = data.replace(varr, str(argv[i]))
+
+		fi = open('/tmp/talosbuffer',"w")
+		fi.write(data)
+		fi.close()
+
 		commands = data.split("\n")
 		
 		i = 0
@@ -1228,7 +1245,12 @@ if __name__ == "__main__":
 	
 	parser = argparse.ArgumentParser()
 	parser.add_argument("-s","--script", help="A script file to run")
+
+	parser.add_argument("-ta","--targv", help="Pointer to a CSV format file containing optional arguments for script")
 	parser.add_argument("-nt","--no-transcript", action='store_true', help="Do not track the session transcript, for whatever reason")
+
+	
+
 	args = parser.parse_args()
 	
 	t = threading.Thread(target=mon_log, args=("notify.log",))
@@ -1248,7 +1270,11 @@ if __name__ == "__main__":
 		log_transcript = False
 
 	if args.script:
-		read_loop(args.script)
+		targv=None
+		if args.targv:
+			targv=open(args.targv,"r").read().split(",")
+
+		read_loop(args.script, argv=targv)
 	else:
 		while True:
 			try:

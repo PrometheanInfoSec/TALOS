@@ -39,6 +39,9 @@ pausetime = 0.1
 log_transcript = True
 transcript = []
 
+#Set debug to true on command line with --debug
+DEBUG = False
+
 def print_banner():
 	subprocess.call("clear", shell=True)
 	banner = """\n\n
@@ -685,7 +688,15 @@ def comparse(com, module, current):
 		return com
 	
 	com = com.split("`")
-	parse_com(com[1], module, current)
+	
+	try:
+		parse_com(com[1], module, current)
+	except Exception, e:
+		if DEBUG:
+			raise
+		else:
+			print "ERROR: Parse command.  To debug run with --debug switch."
+
 	out = str(lastout)
 	com = " ".join([com[0],out,com[2]])
 	return com
@@ -1203,8 +1214,14 @@ def read_loop(filename="", doreturn=False, argv=None):
 			command = commands[i]
 			if module != module_history[-1]:
 				module_history.append(module)
-			module = parse_com(alias(str(command)),module,current)
-			
+			try:
+				module = parse_com(alias(str(command)),module,current)
+			except Exception, e:
+				if DEBUG:
+					raise
+				else:
+					print "ERROR: Parse command.  To debug run with --debug switch"
+
 			#goto line in script
 			if "|||" in module:
 				global ifstate
@@ -1235,7 +1252,17 @@ def read_loop(filename="", doreturn=False, argv=None):
 			prompt = module + ">>>"
 		else:
 			prompt = qu.get_prompt() 
-		module = parse_com(alias(str(raw_input("%s " % (prompt)))), module, current)
+		
+		
+		try:
+			module = parse_com(alias(str(raw_input("%s " % (prompt)))), module, current)
+		except Exception, e:
+			if DEBUG:
+				raise
+
+			else:
+				print "ERROR: Parse command.  To debug run with --debug switch"
+		
 		if module != module_history[-1] and module != "TALOS":
 			current = imp.load_source('%s' % module,'modules/%s' % (module))
 			mash_dictionaries(current) 
@@ -1248,7 +1275,7 @@ if __name__ == "__main__":
 
 	parser.add_argument("-ta","--targv", help="Pointer to a CSV format file containing optional arguments for script")
 	parser.add_argument("-nt","--no-transcript", action='store_true', help="Do not track the session transcript, for whatever reason")
-
+	parser.add_argument("--debug", action='store_true', help='Enable debugging features (reduced error handling)')
 	
 
 	args = parser.parse_args()
@@ -1266,6 +1293,9 @@ if __name__ == "__main__":
 	print_banner()
 	check_updates()
 	
+	if args.debug:
+		DEBUG = True
+
 	if args.no_transcript:
 		log_transcript = False
 

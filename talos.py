@@ -36,6 +36,12 @@ ifstate = None
 lastout = None
 pausetime = 0.1
 
+additional_aliases = {}
+
+a_loaders = ["module ","load ","use ", "help "]
+a_coms = ['invoke','purge','query','read','unload ','home ','show ','list ','quit','exit','run ','set ']
+a_seconds = ['log','jobs','old','notifications','options','variables','commands','modules']
+
 
 def print_banner():
 	banner = """\n\n
@@ -88,6 +94,8 @@ def print_help():
 	print "#  99) exit"
 
 def check_updates():
+	print "Attempting to check for updates via git"
+	print "to disable this feature run talos with the --no-check flag"
 	a, b = subprocess.Popen("git fetch --dry-run", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
 	
 	if len(b) > 4:
@@ -527,6 +535,7 @@ def alias(command):
 			'q!':'exit',
 			'exot':'exit'
 		}
+	aliases.update(additional_aliases)
 	if command.strip() in aliases:
 		return aliases[command.strip()]
 	if len(command.split()) > 1:
@@ -544,9 +553,9 @@ def complete(text, state):
 	#options = [f for f in output_modules() if f.startswith(text)]
 	com_buffer = readline.get_line_buffer()
 	
-	loaders = ["module ","load ","use ", "help "]
-	coms = ['invoke','purge','query','read','unload ','home ','show ','list ','quit','exit','run ','set ']
-	seconds = ['log','jobs','old','notifications','options','variables','commands','modules']
+	loaders = a_loaders
+	coms = a_coms
+	seconds = a_seconds
 	
 	loader = False
 	first = False
@@ -574,6 +583,38 @@ def initialize():
 	#Otherwise update it
 	os.system("touch logs/notify.log")
 	
+	#Read in user defined aliases
+	global additional_aliases
+
+	fi = open("conf/aliases","r")
+	data = fi.read()
+	fi.close()
+
+	for line in data.split("\n"):
+		if len(line) > 0 and line[0] != "#":
+			try:
+				a = line.split(",")[0].strip()
+				b = line.split(",")[1].strip()
+				additional_aliases[a] = b
+				
+				global a_loaders
+				global a_coms
+				global a_seconds
+
+				for i in range(2):
+					if b in a_loaders:
+						a_loaders.append(a)
+					if b in a_coms:
+						a_coms.append(a)
+					if b in a_seconds:
+						a_seconds.append(a)
+					
+					a = a + " "
+					b = b + " "
+
+
+			except:
+				pass 
 	return
 	
 def launch_bot(script):
@@ -1188,6 +1229,7 @@ if __name__ == "__main__":
 	
 	parser = argparse.ArgumentParser()
 	parser.add_argument("-s","--script", help="A script file to run")
+	parser.add_argument("--no-check",action="store_true", help="don't check for updates")
 	args = parser.parse_args()
 	
 	t = threading.Thread(target=mon_log, args=("notify.log",))
@@ -1201,7 +1243,9 @@ if __name__ == "__main__":
 	module = 'TALOS'
 	module_history = ["TALOS"]
 	print_banner()
-	check_updates()
+	
+	if not args.no_check:
+		check_updates()
 	if args.script:
 		read_loop(args.script)
 	else:

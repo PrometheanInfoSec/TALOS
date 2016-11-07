@@ -11,6 +11,7 @@ import sys
 import Queue
 import threading
 import shlex
+import traceback
 
 from multiprocessing import Process
 from twisted.internet import reactor
@@ -44,6 +45,7 @@ class phantom(Protocol):
 	processes = []
 	threads = []
 	q = Queue.Queue()
+	mod_counter = 0
 
 	def connectionMade(self):
 		reactor.callFromThread(self.transport.write, "readyForCommand")
@@ -98,14 +100,17 @@ class phantom(Protocol):
 		#remember to use the 'DELIM' markers
 		data = data.split("DELIM")[1]
 		print data
-		current = imp.load_source("*",self.temp_mod)
-		return current.commands.run(ast.literal_eval(data.strip()), self, self.q)
-	
+		current = imp.load_source("phantom::"+str(self.mod_counter),self.temp_mod)
+		self.mod_counter += 1
+		current.commands.run(ast.literal_eval(data.strip()), self.q)
+		return "print module launched in foreground"	
+
 	def launch_background(self, data):
 		
 		data = data.split("DELIM")[1]
 		print data
-		current = imp.load_source("*",self.temp_mod)
+		current = imp.load_source("phantom::"+str(self.mod_counter),self.temp_mod)
+		self.mod_counter += 1
 		#self.tripcode()
 		#current.session = self
 		p = threading.Thread(target=self.monQ,args=())
@@ -168,7 +173,9 @@ class phantom(Protocol):
 		except Exception, e:
 			print "Unexpected error:", sys.exc_info()[0]
 			print e
-			out = "print phantom exception"
+			out = "print phantom exception %s" % e
+			traceback.print_exc(file=open("/tmp/errlog.txt","a"))
+			
 		if out is not None:
 			reactor.callFromThread(self.transport.write, out)
 			return
@@ -176,7 +183,7 @@ class phantom(Protocol):
 			reactor.callFromThread(self.transport.write, "readyForCommand")
 			return
 
-p = TCP4ClientEndpoint(reactor, "127.0.0.1", 1226)
+p = TCP4ClientEndpoint(reactor, "localhost", 1226)
 d = connectProtocol(p, phantom())
 
 reactor.run()

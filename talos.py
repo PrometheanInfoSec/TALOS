@@ -42,8 +42,14 @@ a_loaders = ["module ","load ","use ", "help "]
 a_coms = ['invoke','purge','query','read','unload ','home ','show ','list ','quit','exit','run ','set ']
 a_seconds = ['log','jobs','old','notifications','options','variables','commands','modules']
 
+log_transcript = True
+transcript = []
+
+#Set debug to true on command line with --debug
+DEBUG = False
 
 def print_banner():
+	subprocess.call("clear", shell=True)
 	banner = """\n\n
 ####################################################
 ####################################################
@@ -505,7 +511,8 @@ def help_command(command):
 			'read':'read a variable',
 			'read notifications':'read unread notifications',
 			'read old':'read all notifications in notify.log',
-			'invoke <filename>':'invoke the script located at <filename>'
+			'invoke <filename>':'invoke the script located at <filename>',
+			'invoke <filename> <optional::argv1> <optional::argv2> etc..':'Invoke the script <filename> with as many arguments as are specified in the script.'
 			}
 
 	if command in help_texts:
@@ -722,7 +729,15 @@ def comparse(com, module, current):
 		return com
 	
 	com = com.split("`")
-	parse_com(com[1], module, current)
+	
+	try:
+		parse_com(com[1], module, current)
+	except Exception, e:
+		if DEBUG:
+			raise
+		else:
+			print "ERROR: Parse command.  To debug run with --debug switch."
+
 	out = str(lastout)
 	com = " ".join([com[0],out,com[2]])
 	return com
@@ -762,10 +777,32 @@ def varparse(com):
 
 	return " ".join(line)
 
+def transcript_write(filename):
+	if filename == "!justprint!":
+		print "\n".join(transcript[:len(transcript)-1])
+		return
+	
+	if os.path.exists(filename):
+		print "This file already exists"
+		print "Cannot write out transcript"
+		return
+	
+	
+	fi = open(filename, "w")
+	fi.write("\n".join(transcript[:len(transcript)-1])+"\n")
+	fi.close()
+	print 'Transcript written out to file: %s' % filename
+	return
+
 def update():
 	a,b = subprocess.Popen("git pull", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
-	print "TALOS updated"
-	print "Please restart TALOS"
+	if not "Already up-to-date." in a:
+		print a
+		print
+		print "TALOS updated"
+		print "Please restart TALOS"
+	else:
+		print "Already up-to-date."
 
 def cat(var0, var1):
 	return str(var0) + str(var1)
@@ -828,6 +865,8 @@ def conditionparse(com):
 
 def parse_com(com, module, current):
 	global lastout
+	if log_transcript:
+		transcript.append(com)
 
 	com = comparse(com, module, current)
 	com = varparse(com)
@@ -879,6 +918,19 @@ def parse_com(com, module, current):
 		update()
 		return module
 
+
+	#transcript without argument
+	if com.strip().lower() == "transcript":
+		print "Need to supply an output file"
+		print "transcript <filename>"
+		print "OR to just print"
+		print "transcript !justprint!"
+		return module
+
+	#transcript
+	if len(com.strip().lower().split()) == 2 and com.strip().lower().split()[0] == "transcript":
+		transcript_write(com.strip().lower().split()[1])
+		return module
 
 	#del <var>
 	if len(com.strip().lower().split()) == 2 and com.strip().lower().split()[0] == "del":
@@ -952,8 +1004,13 @@ def parse_com(com, module, current):
 		return module
 
 	#invoke
-	if len(com.strip().lower().split()) == 2 and com.strip().lower().split()[0] == "invoke":
-		module = read_loop(filename=com.strip().lower().split()[1], doreturn=True)
+	if len(com.strip().lower().split()) >= 2 and com.strip().lower().split()[0] == "invoke":
+		
+		targv = None
+		if len(com.strip().lower().split()) > 2:
+			targv = com.strip().lower().split()[2:]
+
+		module = read_loop(filename=com.strip().lower().split()[1], doreturn=True, argv=targv)
 		return module
 
 	#list
@@ -1162,7 +1219,7 @@ def dec(var):
 		return False
 
 
-def read_loop(filename="", doreturn=False):
+def read_loop(filename="", doreturn=False, argv=None):
 	global module
 	global module_history
 	global current
@@ -1179,6 +1236,17 @@ def read_loop(filename="", doreturn=False):
 		except:
 			print "Found no script by that name"
 			return
+		if argv != None and type(argv) == list:
+			for i in xrange(len(argv)):
+				varr = "$"+str(i+1)
+				print "Replacement: ", str(argv[i])
+
+				data = data.replace(varr, str(argv[i]))
+
+		fi = open('/tmp/talosbuffer',"w")
+		fi.write(data)
+		fi.close()
+
 		commands = data.split("\n")
 		
 		i = 0
@@ -1187,8 +1255,14 @@ def read_loop(filename="", doreturn=False):
 			command = commands[i]
 			if module != module_history[-1]:
 				module_history.append(module)
-			module = parse_com(alias(str(command)),module,current)
-			
+			try:
+				module = parse_com(alias(str(command)),module,current)
+			except Exception, e:
+				if DEBUG:
+					raise
+				else:
+					print "ERROR: Parse command.  To debug run with --debug switch"
+
 			#goto line in script
 			if "|||" in module:
 				global ifstate
@@ -1219,7 +1293,17 @@ def read_loop(filename="", doreturn=False):
 			prompt = module + ">>>"
 		else:
 			prompt = qu.get_prompt() 
-		module = parse_com(alias(str(raw_input("%s " % (prompt)))), module, current)
+		
+		
+		try:
+			module = parse_com(alias(str(raw_input("%s " % (prompt)))), module, current)
+		except Exception, e:
+			if DEBUG:
+				raise
+
+			else:
+				print "ERROR: Parse command.  To debug run with --debug switch"
+		
 		if module != module_history[-1] and module != "TALOS":
 			current = imp.load_source('%s' % module,'modules/%s' % (module))
 			mash_dictionaries(current) 
@@ -1230,6 +1314,11 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument("-s","--script", help="A script file to run")
 	parser.add_argument("--no-check",action="store_true", help="don't check for updates")
+
+	parser.add_argument("-ta","--targv", help="Pointer to a CSV format file containing optional arguments for script")
+	parser.add_argument("-nt","--no-transcript", action='store_true', help="Do not track the session transcript, for whatever reason")
+	parser.add_argument("--debug", action='store_true', help='Enable debugging features (reduced error handling)')
+	
 	args = parser.parse_args()
 	
 	t = threading.Thread(target=mon_log, args=("notify.log",))
@@ -1246,7 +1335,30 @@ if __name__ == "__main__":
 	
 	if not args.no_check:
 		check_updates()
+
+	
+	if args.debug:
+		DEBUG = True
+
+	if args.no_transcript:
+		log_transcript = False
+
 	if args.script:
-		read_loop(args.script)
+		targv=None
+		if args.targv:
+			targv=open(args.targv,"r").read().split(",")
+
+		read_loop(args.script, argv=targv)
 	else:
-		read_loop()
+		while True:
+			try:
+				read_loop()
+			except KeyboardInterrupt:
+				print "Received Interrupt Signal"
+				print "Would like to exit?"
+				rea = raw_input("[Y/n]>>> ")
+				if rea.lower() == "y" or rea.lower()=="yes":
+					print "Exiting.. "
+					exit()
+			
+

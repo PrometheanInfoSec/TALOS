@@ -16,6 +16,7 @@ from twisted.internet import reactor
 from core.backbone import _exec
 from core.database import essential
 from core.backbone import QU
+from core.bootstrap import bootstrap
 
 qu = QU()
 
@@ -586,6 +587,9 @@ def complete(text, state):
 	else:
 		return None
 def initialize():
+	#Call global bootstrap functions
+	init_a = bootstrap()
+
 	#Init log file if not there.
 	#Otherwise update it
 	os.system("touch logs/notify.log")

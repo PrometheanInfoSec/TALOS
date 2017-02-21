@@ -5,7 +5,7 @@ import sqlite3
 
 class essential:
 	#don't chance this just yet.  We're gonna work with a centralized database until I see a compelling need for multiple workstations.
-	db_file = 'talos.db'
+	db_file = 'assets/talos.db'
 
 	def __init__(self):
 		try:

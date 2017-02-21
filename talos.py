@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 
+import core.depends
+core.depends.main()
+
+import core.conf
+conf = core.conf.conf(core.conf.buildconf().confdict)
+
 import argparse
 import sys, os
 from os import path
@@ -1337,7 +1343,7 @@ if __name__ == "__main__":
 	module_history = ["TALOS"]
 	print_banner()
 	
-	if not args.no_check:
+	if not args.no_check and not conf.no_check:
 		check_updates()
 
 	
@@ -1359,7 +1365,7 @@ if __name__ == "__main__":
 				read_loop()
 			except KeyboardInterrupt:
 				print "Received Interrupt Signal"
-				print "Would like to exit?"
+				print "Would you like to exit?"
 				rea = raw_input("[Y/n]>>> ")
 				if rea.lower() == "y" or rea.lower()=="yes":
 					print "Exiting.. "

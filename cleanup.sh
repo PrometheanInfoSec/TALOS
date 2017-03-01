@@ -1,2 +1,2 @@
 > logs/notify.log
-> rubberglue_log.txt
+> logs/rubberglue_log.txt

@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 
+from core.logging import log_notification
+
 import core.depends
-core.depends.main()
+import time
+outcd =core.depends.ppip()
+if outcd[0]:
+	log_notification("Dependencies were installed: %s" % outcd[1])
 
 import core.conf
 conf = core.conf.conf(core.conf.buildconf().confdict)
@@ -12,7 +17,6 @@ from os import path
 import imp
 from multiprocessing import Process
 import readline
-import time
 import threading
 import signal
 import shlex

@@ -1,4 +1,4 @@
 twisted
 netaddr
 paramiko
-service_identity
+service-identity

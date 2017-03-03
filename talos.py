@@ -105,9 +105,13 @@ def print_help():
 	print "#     B) read old"
 	print "#  8) purge"
 	print "#     A) purge log"
+	print "#     B) purge transcript"
 	print "#  9) invoke"
 	print "#     A) invoke <filename>"
 	print "#  10) update"
+	print "#  11) transcript"
+	print "#     A) transcript <filename>"
+	print "#     B) transcript !justprint!"
 	print "#  99) exit"
 
 def check_updates():
@@ -523,7 +527,11 @@ def help_command(command):
 			'read notifications':'read unread notifications',
 			'read old':'read all notifications in notify.log',
 			'invoke <filename>':'invoke the script located at <filename>',
-			'invoke <filename> <optional::argv1> <optional::argv2> etc..':'Invoke the script <filename> with as many arguments as are specified in the script.'
+			'invoke <filename> <optional::argv1> <optional::argv2> etc..':'Invoke the script <filename> with as many arguments as are specified in the script.',
+			'transcript':"Write your session history out to a file to be replayed as a script at a later date.",
+			'transcript !justprint!':"Print your session history to the screen",
+			'purge log':"Purge the notifications log",
+			'purge transcript':"Purge your session history"
 			}
 
 	if command in help_texts:
@@ -652,6 +660,12 @@ def read_tripcode(tripcode):
 	for line in temp:
 		if not "#" in line and "," in line and tripcode == line.split(",")[0]:
 			launch_bot(line.split(",")[1])
+
+
+def purge_transcript():
+	global transcript
+	transcript = []
+	return
 
 def purge_log(log):
 	fi = open("logs/%s" % log,"w")
@@ -1171,6 +1185,11 @@ def parse_com(com, module, current):
 		purge_log("notify.log")
 		return module
 
+	#purge transcript
+	if com.strip().lower() == "purge transcript":
+		purge_transcript()
+		return module
+
 	#query
 	if len(com.strip().lower().split()) > 1 and com.strip().lower().split()[0] == "query":
 		e = essential()
@@ -1249,7 +1268,8 @@ def read_loop(filename="", doreturn=False, argv=None):
 			fi.close()
 		except:
 			print "Found no script by that name"
-			return
+			return module
+		
 		if argv != None and type(argv) == list:
 			for i in xrange(len(argv)):
 				varr = "$"+str(i+1)

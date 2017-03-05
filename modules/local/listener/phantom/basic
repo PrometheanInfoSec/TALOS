@@ -288,7 +288,7 @@ class phantom_p(Protocol):
 		
 		#notification
 		if len(coms) == 2 and coms[0] == "notify":
-			log_notification(coms[1])
+			log_notification(coms[1], tool="phantom")
 			self.sendmsg("notification loaded" )
 			return d
 

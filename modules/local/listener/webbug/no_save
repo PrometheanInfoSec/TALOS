@@ -30,7 +30,7 @@ class commands:
 		print "Listening"
 		while True:
 			con, addr = s.accept()
-			log_notification("wordbug/no_save New connection from %s:%s " % (addr[0], addr[1]))
+			log_notification("New connection from %s:%s " % (addr[0], addr[1]), tool="webbug/no_save")
 			print "Received new connection from> %s:%s " % (addr[0], addr[1])	
 			con.close()
 

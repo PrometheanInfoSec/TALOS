@@ -42,9 +42,9 @@ class commands:
 		while True:
 			con, addr = s.accept()
 			if len(tripcode) > 0:
-				log_tripcode("honeyports/basic connection from %s:%s" % (addr[0],addr[1]), tripcode )
+				log_tripcode("lport %s -> connection from %s:%s" % (PORT, addr[0],addr[1]), tripcode, tool="honeyports/basic" )
 			else:
-				log_notification("honeyports/basic connection from %s:%s" % (addr[0],addr[1]))
+				log_notification("lport %s -> connection from %s:%s" % (PORT, addr[0],addr[1]), tool="honeyports/basic")
 			print "Connection from %s:%s" % (addr[0],addr[1])
 			if not addr[0] in whitelist:
 				os.system("iptables -A INPUT -s %s -j DROP" % (addr[0]))

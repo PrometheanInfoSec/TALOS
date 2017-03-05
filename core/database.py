@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 import sqlite3
 
+class dbadmin:
+	db_file = 'assets/admin.db'
 
+	def __init__(self):
+		return
 
 class essential:
 	#don't chance this just yet.  We're gonna work with a centralized database until I see a compelling need for multiple workstations.

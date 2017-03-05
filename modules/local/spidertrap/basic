@@ -15,7 +15,7 @@
 #CHAR_SPACE = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-/'
 ### End Configuration Section ###
 
-from core/logging import log_notification
+from core.logging import log_notification
 
 meta = {
         'author':'Ethan Robish',

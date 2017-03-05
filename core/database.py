@@ -15,6 +15,7 @@ class essential:
 			conn.close()
 		except:
 			print "Database error\nCannot connect to db file\n%s " % (self.db_file)
+			raw_input("Press enter to continue...")
 
 	def db_create_table(self, table):
 		conn = sqlite3.connect(self.db_file)

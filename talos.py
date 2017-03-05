@@ -605,6 +605,8 @@ def complete(text, state):
 	else:
 		return None
 def initialize():
+	esse = essential()
+
 	#Call global bootstrap functions
 	init_a = bootstrap()
 

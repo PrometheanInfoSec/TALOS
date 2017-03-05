@@ -43,9 +43,11 @@ import random
 import BaseHTTPServer
 import time
 
+spiders = []
+
 class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
   webpages = None
-  count = 0  
+  
 
   def generate_page(self, seed):
     """Generate a webpage containing only random links"""
@@ -92,9 +94,10 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
     # seed the rand function with the current URL path
     self.wfile.write(self.generate_page(self.path))
   
-    if self.count % 100 == 0:
-	self.count += 1
-        log_notification("Spidertrap has detected and trapped a spider.")
+    global spiders
+    if self.client_address[0] not in spiders:
+	spiders.append(self.client_address[0])
+        log_notification("New spider detected (%s,%s)" % (self.client_address), "spidertrap")
 
 def print_usage():
   print 'Usage: ' + sys.argv[0] + ' [FILE]\n'

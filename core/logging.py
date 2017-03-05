@@ -1,8 +1,10 @@
 import datetime
 
-def log_notification(msg):
+def log_notification(msg, tool=None):
+	if tool == None:
+		tool = "Tool Unspecified"
 	fi = open("logs/notify.log","a")
-	fi.write(str(datetime.datetime.now())+":"+str(msg)+"\n")
+	fi.write(str(tool) + ":" + str(datetime.datetime.now())+":"+str(msg)+"\n")
 	fi.close()
 	return
 

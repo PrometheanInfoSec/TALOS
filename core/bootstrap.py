@@ -4,7 +4,7 @@ import os
 class bootstrap:
 	
 	def __init__(self, force=False):
-		self._install_requirements(force)
+		#self._install_requirements(force)
 
 	def _install_requirements(self, force=False):
 		if not os.path.isfile("conf/.installed_requiements") or force:

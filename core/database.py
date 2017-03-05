@@ -10,6 +10,8 @@ class essential:
 	def __init__(self):
 		try:
 			conn = sqlite3.connect(self.db_file)
+			c = conn.cursor()
+			c.execute("select * from talos")
 			conn.close()
 		except:
 			print "Database error\nCannot connect to db file\n%s " % (self.db_file)

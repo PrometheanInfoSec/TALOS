@@ -114,6 +114,8 @@ def print_help():
 	print "#  - purge"
 	print "#     A) purge log"
 	print "#     B) purge transcript"
+	print "#     C) purge db"
+	print "#     D) purge db admin"
 	print "#  - invoke"
 	print "#     A) invoke <filename>"
 	print "#  - update"
@@ -549,12 +551,16 @@ def help_command(command):
 			'silence':"Mute or unmute module notifications",
 
 
+			'purge db':'Purges the Talos db',
+			'purge db admin':'Purges the admin db',
+
 			'purge log':"Purge the notifications log",
 			'purge transcript':"Purge your session history"
 			}
 
 	if command in help_texts:
-		print help_texts[command]
+		print "--",str(command),"--"
+		print ">",help_texts[command]
 		return True
 	print "No such module or command"
 	return False
@@ -681,6 +687,21 @@ def read_tripcode(tripcode):
 			launch_bot(line.split(",")[1])
 
 
+def purge_db():
+	esse = essential()
+	esse.db_purge()
+	time.sleep(1)
+	esse.db_fill_tables()
+	print "Database purged"
+
+def purge_db_admin():
+        dba = dbadmin()
+        dba.db_purge()
+	time.sleep(1)
+	dba.db_fill_tables()
+	print "Admin database purged"
+
+
 def purge_transcript():
 	global transcript
 	transcript = []
@@ -783,7 +804,7 @@ def comparse(com, module, current):
 		if DEBUG:
 			raise
 		else:
-			print "ERROR: Parse command.  To debug run with --debug switch."
+			print "ERROR: Parse command.  To debug run talos.py with --debug switch."
 
 	out = str(lastout)
 	com = " ".join([com[0],out,com[2]])
@@ -840,6 +861,9 @@ def transcript_write(filename):
 	fi.close()
 	print 'Transcript written out to file: %s' % filename
 	return
+
+def purposefail():
+	raise Exception("Purposefail")
 
 def silence_list():
 	print "Tools Silenced"
@@ -1023,6 +1047,11 @@ def parse_com(com, module, current):
 		return module
 
 
+	#purposefail
+	if com.strip().lower() == 'pureposefail' or com.strip().lower() == "purposefail":
+		pureposefail()
+		return module
+
 	#transcript without argument
 	if com.strip().lower() == "transcript":
 		print "Need to supply an output file"
@@ -1104,7 +1133,7 @@ def parse_com(com, module, current):
 	#help module || help command
 	if len(com.strip().lower().split()) > 1 and com.strip().lower().split()[0] == "help":
 		if not help_module(com.strip().lower().split()[1]):
-			help_command(str(com.strip().lower().split()[1:]))
+			help_command(str(" ".join(com.strip().lower().split()[1:])))
 		return module
 
 	#invoke
@@ -1254,6 +1283,16 @@ def parse_com(com, module, current):
 	#read old
 	if com.strip().lower() == "read old":
 		read_old()
+		return module
+
+	#purge db
+	if com.strip().lower() == "purge db":
+		purge_db()
+		return module
+
+	#purge db admin
+	if com.strip().lower() == "purge db admin":
+		purge_db_admin()
 		return module
 
 	#purge log
@@ -1447,11 +1486,14 @@ if __name__ == "__main__":
 		check_updates()
 
 	
-	if args.debug:
+	if args.debug or conf.debug:
 		DEBUG = True
 
-	if args.no_transcript:
+	if args.no_transcript or conf.no_transcript:
 		log_transcript = False
+
+	if conf.script:
+		read_loop(conf.script)
 
 	if args.script:
 		targv=None

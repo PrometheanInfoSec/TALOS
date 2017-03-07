@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import sqlite3
+from subprocess import Popen as popen
+
 
 class dbadmin:
 	db_file = 'assets/admin.db'
@@ -19,6 +21,9 @@ class dbadmin:
 			self.db_fill_tables()
 
 		return
+
+	def db_purge(self):
+		popen("rm %s -f && touch %s" % (self.db_file, self.db_file), shell=True)
 
 
 	def db_fill_tables(self):
@@ -75,6 +80,9 @@ class essential:
 			conn.close()
 		except:
 			self.db_fill_tables()
+
+	def db_purge(self):
+                popen("rm %s -f" % self.db_file, shell=True)
 
 
 	def db_fill_tables(self):

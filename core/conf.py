@@ -7,7 +7,7 @@ class conf:
 				continue
 			if incoming[key].lower() == "true":
 				incoming[key] = True
-			if incoming[key].lower() == "false":
+			elif incoming[key].lower() == "false":
 				incoming[key] = False
 
 			setattr(self, key, incoming[key])
@@ -18,7 +18,10 @@ class buildconf:
 	
 
 	confdict = {
-		"no_check":None
+		"no_check":None,
+		"script":None,
+		"no_transcript":None,
+		"debug":None
 		}
 
 	confphile = "conf/talos.conf"

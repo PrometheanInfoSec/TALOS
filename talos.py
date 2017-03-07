@@ -24,11 +24,18 @@ import subprocess
 
 from twisted.internet import reactor
 from core.backbone import _exec
-from core.database import essential
+from core.database import essential, dbadmin
 from core.backbone import QU
 from core.bootstrap import bootstrap
 
 qu = QU()
+
+infostore = {
+		'version':'1',
+		'codename':'bootstrap',
+		'contributors':['Benjamin Donnelly'],
+		'sponsors':['Promethean Info Sec']
+		}
 
 
 variables = {}
@@ -84,35 +91,40 @@ def print_banner():
 
 def print_help():
 	print "# Available commands"
-	print "#  1) help"
+	print "#  - help"
 	print "#     A) help <module>"
 	print "#     B) help <command>"
-	print "#  2) list"
+	print "#  - info"
+	print "#  - list"
 	print "#     A) list modules"
 	print "#     B) list variables"
 	print "#     C) list commands"
 	print "#     D) list jobs"
 	print "#     E) list inst_vars"
-	print "#  3) module"
+	print "#  - module"
 	print "#     A) module <module>"
-	print "#  4) set"
+	print "#  - set"
 	print "#     A) set <variable> <value>"
-	print "#  5) home"
-	print "#  6) query"
+	print "#  - home"
+	print "#  - query"
 	print "#     A) query <sqlite query>"
-	print "#  7) read"
+	print "#  - read"
 	print "#     A) read notifications"
 	print "#     B) read old"
-	print "#  8) purge"
+	print "#  - purge"
 	print "#     A) purge log"
 	print "#     B) purge transcript"
-	print "#  9) invoke"
+	print "#  - invoke"
 	print "#     A) invoke <filename>"
-	print "#  10) update"
-	print "#  11) transcript"
+	print "#  - update"
+	print "#  - transcript"
 	print "#     A) transcript <filename>"
 	print "#     B) transcript !justprint!"
-	print "#  99) exit"
+	print "#  - silence"
+	print "#     A) silence list"
+	print "#     B) silence add"
+	print "#     C) silence del"
+	print "#  - exit"
 
 def check_updates():
 	print "Attempting to check for updates via git"
@@ -515,6 +527,7 @@ def help_command(command):
 			'help':'Lists general help',
 			'help <module>':'Help for module',
 			'help <command>':'Help for command',
+			'info':"Print info about Talos",
 			'list modules':'List available modules',
 			'list variables':'List current variables',
 			'list commands':'List module specific commands',
@@ -530,6 +543,12 @@ def help_command(command):
 			'invoke <filename> <optional::argv1> <optional::argv2> etc..':'Invoke the script <filename> with as many arguments as are specified in the script.',
 			'transcript':"Write your session history out to a file to be replayed as a script at a later date.",
 			'transcript !justprint!':"Print your session history to the screen",
+			'silence list':'List silenced modules',
+			'silence add':'Silence a module (stop notifications)',
+			'silence del':'Unsilence a module',			
+			'silence':"Mute or unmute module notifications",
+
+
 			'purge log':"Purge the notifications log",
 			'purge transcript':"Purge your session history"
 			}
@@ -605,8 +624,6 @@ def complete(text, state):
 	else:
 		return None
 def initialize():
-	esse = essential()
-
 	#Call global bootstrap functions
 	init_a = bootstrap()
 
@@ -824,6 +841,33 @@ def transcript_write(filename):
 	print 'Transcript written out to file: %s' % filename
 	return
 
+def silence_list():
+	print "Tools Silenced"
+	print "--------------"
+	dba = dbadmin()
+	a = dba.db_exec("select tool from silence", passthrough=True)
+	for line in a:
+		print line[0]
+
+	
+def silence_add(tool):
+	dba = dbadmin()
+	dba.db_exec("insert into silence (tool) values (\"%s\")" % tool)
+	print "%s silenced" % tool
+
+def silence_del(tool):
+	dba = dbadmin()
+	dba.db_exec("delete from silence where tool=\"%s\"" % tool)
+	print "%s unsilenced" % tool
+
+
+def info():
+	for key in infostore.keys():
+		if type(infostore[key]) == list:
+			print key+":"+",".join(infostore[key])
+		else:
+			print key+":"+infostore[key]
+
 def update():
 	a,b = subprocess.Popen("git pull", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
 	if not "Already up-to-date." in a:
@@ -942,7 +986,37 @@ def parse_com(com, module, current):
 	if com[0] == "#":
 		return module
 
-	
+	#info
+	if com.strip().lower() == "info":
+		info()
+		return module	
+
+
+	#silence
+	if com.strip().lower() == "silence":
+		print "silence (list/add/del)?"
+
+	#silence list
+	if com.strip().lower() == "silence list":
+		silence_list()
+		return module
+
+	#silence add
+        if " ".join(com.strip().lower().split()[0:2]) == "silence add":
+		if len(com.strip().lower().split()) > 2:
+                	silence_add(" ".join(com.strip().lower().split()[2:]))
+		else:
+			print "Add what?"
+		return module
+
+	#silence del
+	if " ".join(com.strip().lower().split()[0:2]) == "silence del":
+		if len(com.strip().lower().split()) > 2:
+			silence_del(" ".join(com.strip().lower().split()[2:]))
+		else:
+			print "Del what?"
+		return module
+
 	#update
 	if com.strip().lower() == "update":
 		update()
@@ -1195,7 +1269,7 @@ def parse_com(com, module, current):
 	#query
 	if len(com.strip().lower().split()) > 1 and com.strip().lower().split()[0] == "query":
 		e = essential()
-		e.db_exec(com.strip().lower().split()[1])
+		e.db_exec(com.strip().lower().split()[1:])
 		return module
 
 	###parse commands

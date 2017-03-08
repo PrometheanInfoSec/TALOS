@@ -8,12 +8,15 @@ meta = {
 Aka, does a network active process have any children which are also active on the network?"""
 }
 
-variables = {}
+variables = {'log':['no','yes','Log a notification?'],'continuous':['no','yes','Run continuously? Or only once?'],'wait':['60','yes','If running continuously, wait between runs in seconds']}
 
 import os
 import subprocess
+import time
 
-def main():
+from core.logging import log_notification
+
+def main(log=False):
 	a = subprocess.Popen("netstat -antp | awk '/ESTABLISHED/ {print $7}'", shell=True, stdout=subprocess.PIPE)
 	out, err = a.communicate()
 
@@ -41,14 +44,41 @@ def main():
 						a = subprocess.Popen("ps -p %s -o comm=" % (ppid), shell=True, stdout=subprocess.PIPE)
 						output, err = a.communicate()
 						print "Alert: %s :: %s" % (ppid, output)
+						if log:
+							log_notification("Alert: %s :: %s !! Possible Pivot" % (ppid, output), "simple-pivot-detect")
 						ppid = 0
 					else:
 						pid = ppid
 
 class commands:
-	def __init__(self)
+	def __init__(self):
 		return
 
 	@staticmethod
-	def run(variables, qu)
-		main()
+	def run(variables, qu):
+	
+		sleepval = 60
+
+		try:
+			sleepval = int(variables['wait'][0])
+		except:
+			print "Wait time improperly set, default is 60 seconds"
+
+		if variables['continuous'][0].lower().strip() == "yes":
+			while True:
+
+				log = False
+		                if variables['log'][0].lower().strip() == 'yes':
+                		        log = True
+
+                		main(log)
+
+				time.sleep(sleepval)
+		else:
+
+			log = False
+			if variables['log'][0].lower().strip() == 'yes':
+				log = True
+
+			main(log)
+

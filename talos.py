@@ -1345,6 +1345,7 @@ def parse_com(com, module, current):
 				print temp
 				return module
 
+	print "No such command"
 	return module
 
 def inc(var):

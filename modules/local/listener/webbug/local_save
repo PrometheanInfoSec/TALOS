@@ -72,7 +72,7 @@ class commands:
 		return
 
 	@staticmethod
-	def run(variables, qu):
+	def run(variables, pt):
 		t = module()
 		t.port = int(variables['port'][0])
 		t.host = variables['host'][0]

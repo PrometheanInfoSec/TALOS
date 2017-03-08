@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+
 from core.logging import log_notification
 
 import core.depends
@@ -27,6 +28,7 @@ from core.backbone import _exec
 from core.database import essential, dbadmin
 from core.backbone import QU
 from core.bootstrap import bootstrap
+from core.passthrough import passthrough
 
 qu = QU()
 
@@ -65,6 +67,14 @@ transcript = []
 
 #Set debug to true on command line with --debug
 DEBUG = False
+
+if os.getuid() != 0:
+	print
+	print "-------------------------"
+	print "Talos must be run as root"
+	print "-------------------------"
+	print 
+	exit(-1)
 
 def print_banner():
 	subprocess.call("clear", shell=True)
@@ -116,6 +126,8 @@ def print_help():
 	print "#     B) purge transcript"
 	print "#     C) purge db"
 	print "#     D) purge db admin"
+	print "#  - kill thread"
+	print "#     A) kill thread <num>"
 	print "#  - invoke"
 	print "#     A) invoke <filename>"
 	print "#  - update"
@@ -424,30 +436,35 @@ def com_exec_picker(method, current, debug=True):
 		return com_exec(method, current, debug)
 
 def com_exec_launch(method, current, debug=False):
+	global qu
+
 	to_e = getattr(current.commands, method)
+	pt = passthrough(qu, killme)
 	if required_set(variables):
-		global qu
 		qu.comrunning = True
-		
-		t = threading.Thread(target=to_e, args=(variables, qu, ))
+		killme = threading.Event()
+		t = threading.Thread(target=to_e, args=(variables, pt, ))
 		t.daemon=True
 		t.start()
-		threads.append(t)
+		threads.append([current.__file__,t, pt])
 		
 	else:
 		return "required variables not set"
 
 def com_exec(method, current, debug=True):
+	global qu
+
 	to_e = getattr(current.commands, method)
+	killme = None
+	pt = passthrough(qu, killme)
 	if required_set(variables):
-		global qu
 		#qu.comrunning = True
 		if debug:
 			#print variables['tripcode'][0]
-			return to_e(variables, qu)
+			return to_e(variables, pt)
 		else:
 			try:
-				return to_e(variables, qu)
+				return to_e(variables, pt)
 			except:
 				print "Exiting module..."
 				return None
@@ -458,10 +475,12 @@ def com_exec_background(method, current):
 
 	to_e = getattr(current.commands, method)
 	if required_set(variables):
-		p = threading.Thread(target=to_e, args=(variables, qu, ))
+		killme=threading.Event()
+		pt = passthrough(qu, killme)
+		p = threading.Thread(target=to_e, args=(variables, pt,))
 		p.daemon = True
 		p.start()
-		threads.append(p)
+		threads.append([current.__file__,p,pt])
 		return True
 	else:
 		return "required variables not set"	
@@ -473,19 +492,37 @@ def required_set(variables):
 				return False
 	return True
 
+def kill_thread(num):
+	threads[num][2].killme.set()
+
+
 def list_jobs(current):
+	count = 0
+	#current.threads?
+	removeplz = []
 	print "Threads \n--------------------"
 	try: 
-		for thread in current.threads:
-			print thread
+		for thread in threads:
+			status = str(thread[1]).split()[1].strip().lower()
+			print count,"->", thread[0], "::", status
+			if status=="stopped":
+				removeplz.append(threads[count])
+			count += 1
+			
 	except:
 		print "no current threads"
 	
+	for item in removeplz:
+		threads.remove(item)
+	print 
+	
+	count = 0
 	print "Processes \n--------------------"
 	try:
 		if len(processes) > 0:
 			for process in processes:
-				print type(process)
+				print count, "->", type(process)
+				count += 1
 		else:
 			print "no current processes"
 	except:
@@ -550,7 +587,7 @@ def help_command(command):
 			'silence del':'Unsilence a module',			
 			'silence':"Mute or unmute module notifications",
 
-
+			'kill thread':"You can kill a thread by number.  If the module you're threading supports being killed in this way.  It might not.",
 			'purge db':'Purges the Talos db',
 			'purge db admin':'Purges the admin db',
 
@@ -777,8 +814,8 @@ def mon_log(log):
 			print "\nYou have received %s new notification%s" % (len(notifications) - bef, s)
 			print "%s total unread notifications" % (len(notifications))
 			sys.stdout.write( "command is: read notifications\n")
-			if not qu.comrunning:
-				sys.stdout.write( "%s>>> %s" % (module, readline.get_line_buffer()) )
+			#if not qu.comrunning:
+			#	sys.stdout.write( "%s>>> %s" % (module, readline.get_line_buffer()) )
 			sys.stdout.flush()		
 
 		time.sleep(120)
@@ -1052,6 +1089,25 @@ def parse_com(com, module, current):
 		pureposefail()
 		return module
 
+	#kill thread
+	if com.strip().lower() == "kill thread":
+		print "Kill which thread?"
+		return module
+
+	#kill thread <num>
+	if " ".join(com.strip().lower().split()[0:2]) == "kill thread" and len(com.strip().lower().split()) == 3:
+
+		try:
+			lltnum = int(com.strip().lower().split()[2])
+			print "Attempting to kill thread %s" % lltnum
+			print "If it doesn't die it may not yet support being killed."
+			print 
+			kill_thread(lltnum)
+		except:
+			print "Something went wrong.  Did you enter a valid thread number?"
+		return module
+
+
 	#transcript without argument
 	if com.strip().lower() == "transcript":
 		print "Need to supply an output file"
@@ -1313,7 +1369,7 @@ def parse_com(com, module, current):
 
 	###parse commands
 	if not isinstance(current, str):
-		print current.__file__
+		#print current.__file__
 		if len(com.strip().lower().split()) < 2:
 			if com.strip().lower() in dir(current.commands):
 				temp = com_exec_picker(com.strip().lower(), current)
@@ -1330,19 +1386,18 @@ def parse_com(com, module, current):
 
 					com_exec_picker("run",current)
 				
-				print temp
+				#print temp
 				return module
 		elif len(com.strip().lower().split()) == 2 and com.strip().lower().split()[1] == "-j":
-			print 0.1
 			if com.strip().lower().split()[0] in dir(current.commands):
 				temp = com_exec_background(com.strip().lower().split()[0], current)
-				print temp
+				#print temp
 				return module
 		elif len(com.strip().lower().split()) == 2 and com.strip().lower().split()[1] == '-d':
 			print "Running in debug mode"
 			if com.strip().lower().split()[0] in dir(current.commands):
 				temp = com_exec_picker(com.strip().lower().split()[0], current, True)
-				print temp
+				#print temp
 				return module
 
 	print "No such command"

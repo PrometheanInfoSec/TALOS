@@ -22,7 +22,7 @@ class commands:
 		return
 
 	@staticmethod
-	def run(variables, qu):
+	def run(variables, pt):
 
 		HOST = variables['host'][0]
 		PORT = int(variables['port'][0])
@@ -40,6 +40,9 @@ class commands:
 		#ss.option = 4	
 		#signal.signal(signal.SIGINT, ss.sigg)
 		while True:
+			if pt.killme.isSet():
+				break
+
 			con, addr = s.accept()
 			if len(tripcode) > 0:
 				log_tripcode("lport %s -> connection from %s:%s" % (PORT, addr[0],addr[1]), tripcode, tool="honeyports/basic" )

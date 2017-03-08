@@ -533,7 +533,7 @@ class commands:
 		return
 
 	@staticmethod
-	def launch(variables, qu):
+	def launch(variables, pt):
 		host = variables['host'][0]
 		port = int(variables['port'][0])
 
@@ -567,7 +567,7 @@ class commands:
 		qv.accept_input(u)
 
 	@staticmethod
-        def run(variables, qu):
+        def run(variables, pt):
                 host = variables['host'][0]
                 port = int(variables['port'][0])
 

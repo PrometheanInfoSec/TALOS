@@ -123,7 +123,7 @@ class commands:
 		return
 
 	@staticmethod
-	def run(variables, qu):
+	def run(variables, pt):
 		global instance
 
 		local_ip = variables['host'][0]

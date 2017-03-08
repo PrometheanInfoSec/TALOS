@@ -55,7 +55,7 @@ class commands:
 		return
 
 	@staticmethod
-	def run(variables, qu):
+	def run(variables, pt):
 	
 		sleepval = 60
 

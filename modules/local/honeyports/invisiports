@@ -87,7 +87,7 @@ class commands:
 		return
 	
 	@staticmethod
-	def run(variables, qu):
+	def run(variables, pt):
 		whitelist = variables['whitelist'][0].split(",")
 		ADDR = variables['host'][0]
 		PORT = int(variables['listen_port'][0])

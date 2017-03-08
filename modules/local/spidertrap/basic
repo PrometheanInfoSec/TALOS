@@ -143,7 +143,7 @@ class commands:
 		return
 
 	@staticmethod
-	def run(variables, qu):
+	def run(variables, pt):
 		global LINKS_PER_PAGE
 		global LENGTH_OF_LINKS
 		global PORT

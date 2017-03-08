@@ -38,7 +38,7 @@ class commands:
 		return
 
 	@staticmethod
-	def run(variables, qu):
+	def run(variables, pt):
 		type_x = variables['type']
 		listener = variables['listener']
 		template = variables['template']

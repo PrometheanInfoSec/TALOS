@@ -38,7 +38,7 @@ class commands:
                 return
 
         @staticmethod
-        def run(variables, qu):
+        def run(variables, pt):
 		global threads
 
                 HOST = variables['host']

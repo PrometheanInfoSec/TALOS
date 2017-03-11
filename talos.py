@@ -146,6 +146,8 @@ def check_updates():
 	a, b = subprocess.Popen("git fetch --dry-run", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
 	
 	if len(b) > 4:
+		print 
+		print "--- Notice ---"
 		print "Your version of TALOS is out of date."
 		print "Please update at your earliest opportunity."
 

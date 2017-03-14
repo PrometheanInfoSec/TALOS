@@ -151,6 +151,25 @@ def check_updates():
 		print "Your version of TALOS is out of date."
 		print "Please update at your earliest opportunity."
 
+
+def did_you_mean(inp):
+	poss = []
+
+	for root, dirnames, filenames in os.walk("modules"):
+		for filename in filenames:
+			path = root + "/"
+			path = path.split("modules/")[1]
+			if not "pyc" in filename and is_module("modules/"+path+filename):
+				for atte in inp.split("/"):
+					if atte in (path+filename):
+						poss.append(path+filename)
+
+	if len(poss) > 0:
+		print "\n -- Did you mean? -- "
+		for i in poss:
+			print i
+
+
 def list_modules():
 	print "Available modules"
 	
@@ -183,9 +202,12 @@ def output_modules():
 
 
 def load_module(selection, prev):
-	print "loading new module in load_module"
 	if os.path.isfile("modules/"+ selection) and "pyc" not in selection and ".." not in selection and is_module("modules/" + selection):
+			print "Loading module.."
 			return selection
+
+	print "No module with that name."
+	did_you_mean(selection)
 	return prev
 
 def isset(variable, module):
@@ -843,7 +865,8 @@ def comparse(com, module, current):
 		if DEBUG:
 			raise
 		else:
-			print "ERROR: Parse command.  To debug run talos.py with --debug switch."
+			print "ERROR: [%s]" % e
+		#	print "ERROR: Parse command.  To debug run talos.py with --debug switch."
 
 	out = str(lastout)
 	com = " ".join([com[0],out,com[2]])
@@ -1468,7 +1491,8 @@ def read_loop(filename="", doreturn=False, argv=None):
 				if DEBUG:
 					raise
 				else:
-					print "ERROR: Parse command.  To debug run with --debug switch"
+					print "ERROR: [%s]" % e
+					#print "ERROR: Parse command.  To debug run with --debug switch"
 
 			#goto line in script
 			if "|||" in module:
@@ -1509,7 +1533,8 @@ def read_loop(filename="", doreturn=False, argv=None):
 				raise
 
 			else:
-				print "ERROR: Parse command.  To debug run with --debug switch"
+				print "ERROR: [%s]" % e
+				#print "ERROR: Parse command.  To debug run with --debug switch"
 		
 		if module != module_history[-1] and module != "TALOS":
 			current = imp.load_source('%s' % module,'modules/%s' % (module))

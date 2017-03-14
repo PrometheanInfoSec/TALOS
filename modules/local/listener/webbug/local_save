@@ -18,12 +18,12 @@ class module:
 	host = ""
 	port = 80
 
-	self.css = """
+	css = """
 		body{background-color:white;}
 	"""
 
 	#Add in actual return data here
-	self.img = """
+	img = """
 		aaaaaaaaaaaaaaa
 	"""
 

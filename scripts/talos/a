@@ -1,0 +1,3 @@
+#here
+echo 1
+goto #here

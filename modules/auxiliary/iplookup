@@ -1,0 +1,17 @@
+#!/usr/bin/env python
+from ipwhois import IPWhois
+import pprint
+meta = {"author":"Vlad", "ported_by":"Vlad", "version": "1.0", "info": "Ip lookup"}
+
+variables = {"ip":["", "yes", "Ip to lookup"]}
+
+class commands:
+	def __init__(self):
+		return
+	
+	@staticmethod
+	def run(variables, pt):
+        	ip = variables["ip"][0]
+        	obj = IPWhois(ip)
+        	results = obj.lookup_rdap(depth = 1)
+        	pprint.pprint(results)

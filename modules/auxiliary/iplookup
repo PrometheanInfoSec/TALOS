@@ -12,7 +12,8 @@ class commands:
 	
 	@staticmethod
 	def run(variables, pt):
-		db = essential.essential()
+		db = essential()
+		db.__init__
 		db.db_create_table("iplookup (data text NOT NULL);")
 		ip = variables["ip"][0]
 		obj = IPWhois(ip)

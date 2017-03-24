@@ -16,7 +16,6 @@ class commands:
 		ip = variables["ip"][0]
 		obj = IPWhois(ip)
 		results = obj.lookup_rdap(depth = 1)
-		if(variables[logdb][0] == "yes"){
+		if(variables[logdb][0] == "yes")
 			db_exec("INSERT INTO iplookup (data) VALUES (%s);", results)
-		}
 		pprint.pprint(results)

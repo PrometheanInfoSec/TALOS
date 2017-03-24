@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from ipwhois import IPWhois
-from core.database import db_create_table, db_exec
+from core.database import essential
 import pprint
 meta = {"author":"Vlad", "ported_by":"Vlad", "version": "1.0", "info": "Ip lookup"}
 
@@ -12,10 +12,11 @@ class commands:
 	
 	@staticmethod
 	def run(variables, pt):
-		db_create_table("iplookup (data text NOT NULL);")
+		essential.__init__
+		essential.db_create_table("iplookup (data text NOT NULL);")
 		ip = variables["ip"][0]
 		obj = IPWhois(ip)
 		results = obj.lookup_rdap(depth = 1)
 		if(variables["logdb"][0] == "yes"):
-			db_exec("INSERT INTO iplookup (data) VALUES (%s);", results)
+			essential.db_exec("INSERT INTO iplookup (data) VALUES (%s);", results)
 		pprint.pprint(results)

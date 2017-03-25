@@ -462,11 +462,12 @@ def com_exec_picker(method, current, debug=True):
 def com_exec_launch(method, current, debug=False):
 	global qu
 
+
 	to_e = getattr(current.commands, method)
+	killme = threading.Event()
 	pt = passthrough(qu, killme)
 	if required_set(variables):
 		qu.comrunning = True
-		killme = threading.Event()
 		t = threading.Thread(target=to_e, args=(variables, pt, ))
 		t.daemon=True
 		t.start()
@@ -479,7 +480,7 @@ def com_exec(method, current, debug=True):
 	global qu
 
 	to_e = getattr(current.commands, method)
-	killme = None
+	killme = threading.Event()
 	pt = passthrough(qu, killme)
 	if required_set(variables):
 		#qu.comrunning = True

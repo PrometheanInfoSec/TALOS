@@ -34,7 +34,7 @@ class commands:
 		return
 
 	@staticmethod
-	def run(variables, qu):
+	def run(variables, pt):
 		port = variables['port'][0]
 		host = variables['host'][0]
 		output_file = variables['output_file'][0]		

@@ -115,7 +115,7 @@ class commands:
 		return
 	
 	@staticmethod
-	def run(variables, qu):
+	def run(variables, pt):
 		global remote
 		global finame
 		global output

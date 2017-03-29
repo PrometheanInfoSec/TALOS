@@ -78,7 +78,7 @@ def blacklist(ip, ports, whitelist, PORT):
 			query = "iptables -t nat -A PREROUTING -s %s -p tcp --dport %s -j REDIRECT --to-port %s" % (ip,port,PORT)
 			os.system(query)
 		add_blacklist(ip)
-		log_notification("honeyports/invisiports host has been blacklisted")
+		log_notification("host has been blacklisted: %s" % (ip), tool="invisiports")
 	return True
 
 
@@ -87,7 +87,7 @@ class commands:
 		return
 	
 	@staticmethod
-	def run(variables, qu):
+	def run(variables, pt):
 		whitelist = variables['whitelist'][0].split(",")
 		ADDR = variables['host'][0]
 		PORT = int(variables['listen_port'][0])

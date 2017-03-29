@@ -288,7 +288,7 @@ class phantom_p(Protocol):
 		
 		#notification
 		if len(coms) == 2 and coms[0] == "notify":
-			log_notification(coms[1])
+			log_notification(coms[1], tool="phantom")
 			self.sendmsg("notification loaded" )
 			return d
 
@@ -533,7 +533,7 @@ class commands:
 		return
 
 	@staticmethod
-	def launch(variables, qu):
+	def launch(variables, pt):
 		host = variables['host'][0]
 		port = int(variables['port'][0])
 
@@ -567,7 +567,7 @@ class commands:
 		qv.accept_input(u)
 
 	@staticmethod
-        def run(variables, qu):
+        def run(variables, pt):
                 host = variables['host'][0]
                 port = int(variables['port'][0])
 

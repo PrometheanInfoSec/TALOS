@@ -27,7 +27,7 @@ def listener(HOST, PORT, whitelist):
 	s.listen(5)
 	while True:
 		con, addr = s.accept()
-		log_notification("honeyports/basic_multiple connection from %s:%s" % (addr[0],addr[1]))
+		log_notification("connection from %s:%s -> %s" % (addr[0],addr[1], PORT), tool="honeyports/basic_multiple")
 		block(addr[0])
 		con.close()
 	
@@ -38,7 +38,7 @@ class commands:
                 return
 
         @staticmethod
-        def run(variables, qu):
+        def run(variables, pt):
 		global threads
 
                 HOST = variables['host']

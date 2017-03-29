@@ -16,6 +16,6 @@ class commands:
 		return
 
 	@staticmethod
-	def run(variables, qu):
+	def run(variables, pt):
 		log_notification("1337")
 		os.system("touch %s/test" % (variables['folder'][0]))

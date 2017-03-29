@@ -42,7 +42,7 @@ class commands:
 		return
 
 	@staticmethod
-	def run(variables, qu):
+	def run(variables, pt):
 		custom = variables['custom'][0]
 
 		script_loc = ""

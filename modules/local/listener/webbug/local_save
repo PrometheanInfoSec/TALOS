@@ -18,12 +18,12 @@ class module:
 	host = ""
 	port = 80
 
-	self.css = """
+	css = """
 		body{background-color:white;}
 	"""
 
 	#Add in actual return data here
-	self.img = """
+	img = """
 		aaaaaaaaaaaaaaa
 	"""
 
@@ -72,7 +72,7 @@ class commands:
 		return
 
 	@staticmethod
-	def run(variables, qu):
+	def run(variables, pt):
 		t = module()
 		t.port = int(variables['port'][0])
 		t.host = variables['host'][0]

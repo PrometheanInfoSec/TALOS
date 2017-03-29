@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+
 from core.logging import log_notification
 
 import core.depends
@@ -24,11 +25,19 @@ import subprocess
 
 from twisted.internet import reactor
 from core.backbone import _exec
-from core.database import essential
+from core.database import essential, dbadmin
 from core.backbone import QU
 from core.bootstrap import bootstrap
+from core.passthrough import passthrough
 
 qu = QU()
+
+infostore = {
+		'version':'1',
+		'codename':'bootstrap',
+		'contributors':['Benjamin Donnelly'],
+		'sponsors':['Promethean Info Sec']
+		}
 
 
 variables = {}
@@ -59,6 +68,14 @@ transcript = []
 #Set debug to true on command line with --debug
 DEBUG = False
 
+if os.getuid() != 0:
+	print
+	print "-------------------------"
+	print "Talos must be run as root"
+	print "-------------------------"
+	print 
+	exit(-1)
+
 def print_banner():
 	subprocess.call("clear", shell=True)
 	banner = """\n\n
@@ -84,35 +101,44 @@ def print_banner():
 
 def print_help():
 	print "# Available commands"
-	print "#  1) help"
+	print "#  - help"
 	print "#     A) help <module>"
 	print "#     B) help <command>"
-	print "#  2) list"
+	print "#  - info"
+	print "#  - list"
 	print "#     A) list modules"
 	print "#     B) list variables"
 	print "#     C) list commands"
 	print "#     D) list jobs"
 	print "#     E) list inst_vars"
-	print "#  3) module"
+	print "#  - module"
 	print "#     A) module <module>"
-	print "#  4) set"
+	print "#  - set"
 	print "#     A) set <variable> <value>"
-	print "#  5) home"
-	print "#  6) query"
+	print "#  - home"
+	print "#  - query"
 	print "#     A) query <sqlite query>"
-	print "#  7) read"
+	print "#  - read"
 	print "#     A) read notifications"
 	print "#     B) read old"
-	print "#  8) purge"
+	print "#  - purge"
 	print "#     A) purge log"
 	print "#     B) purge transcript"
-	print "#  9) invoke"
+	print "#     C) purge db"
+	print "#     D) purge db admin"
+	print "#  - kill thread"
+	print "#     A) kill thread <num>"
+	print "#  - invoke"
 	print "#     A) invoke <filename>"
-	print "#  10) update"
-	print "#  11) transcript"
+	print "#  - update"
+	print "#  - transcript"
 	print "#     A) transcript <filename>"
 	print "#     B) transcript !justprint!"
-	print "#  99) exit"
+	print "#  - silence"
+	print "#     A) silence list"
+	print "#     B) silence add"
+	print "#     C) silence del"
+	print "#  - exit"
 
 def check_updates():
 	print "Attempting to check for updates via git"
@@ -120,8 +146,29 @@ def check_updates():
 	a, b = subprocess.Popen("git fetch --dry-run", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
 	
 	if len(b) > 4:
+		print 
+		print "--- Notice ---"
 		print "Your version of TALOS is out of date."
 		print "Please update at your earliest opportunity."
+
+
+def did_you_mean(inp):
+	poss = []
+
+	for root, dirnames, filenames in os.walk("modules"):
+		for filename in filenames:
+			path = root + "/"
+			path = path.split("modules/")[1]
+			if not "pyc" in filename and is_module("modules/"+path+filename):
+				for atte in inp.split("/"):
+					if atte in (path+filename):
+						poss.append(path+filename)
+
+	if len(poss) > 0:
+		print "\n -- Did you mean? -- "
+		for i in poss:
+			print i
+
 
 def list_modules():
 	print "Available modules"
@@ -155,9 +202,12 @@ def output_modules():
 
 
 def load_module(selection, prev):
-	print "loading new module in load_module"
 	if os.path.isfile("modules/"+ selection) and "pyc" not in selection and ".." not in selection and is_module("modules/" + selection):
+			print "Loading module.."
 			return selection
+
+	print "No module with that name."
+	did_you_mean(selection)
 	return prev
 
 def isset(variable, module):
@@ -410,30 +460,36 @@ def com_exec_picker(method, current, debug=True):
 		return com_exec(method, current, debug)
 
 def com_exec_launch(method, current, debug=False):
+	global qu
+
+
 	to_e = getattr(current.commands, method)
+	killme = threading.Event()
+	pt = passthrough(qu, killme)
 	if required_set(variables):
-		global qu
 		qu.comrunning = True
-		
-		t = threading.Thread(target=to_e, args=(variables, qu, ))
+		t = threading.Thread(target=to_e, args=(variables, pt, ))
 		t.daemon=True
 		t.start()
-		threads.append(t)
+		threads.append([current.__file__,t, pt])
 		
 	else:
 		return "required variables not set"
 
 def com_exec(method, current, debug=True):
+	global qu
+
 	to_e = getattr(current.commands, method)
+	killme = threading.Event()
+	pt = passthrough(qu, killme)
 	if required_set(variables):
-		global qu
 		#qu.comrunning = True
 		if debug:
 			#print variables['tripcode'][0]
-			return to_e(variables, qu)
+			return to_e(variables, pt)
 		else:
 			try:
-				return to_e(variables, qu)
+				return to_e(variables, pt)
 			except:
 				print "Exiting module..."
 				return None
@@ -444,10 +500,12 @@ def com_exec_background(method, current):
 
 	to_e = getattr(current.commands, method)
 	if required_set(variables):
-		p = threading.Thread(target=to_e, args=(variables, qu, ))
+		killme=threading.Event()
+		pt = passthrough(qu, killme)
+		p = threading.Thread(target=to_e, args=(variables, pt,))
 		p.daemon = True
 		p.start()
-		threads.append(p)
+		threads.append([current.__file__,p,pt])
 		return True
 	else:
 		return "required variables not set"	
@@ -459,19 +517,37 @@ def required_set(variables):
 				return False
 	return True
 
+def kill_thread(num):
+	threads[num][2].killme.set()
+
+
 def list_jobs(current):
+	count = 0
+	#current.threads?
+	removeplz = []
 	print "Threads \n--------------------"
 	try: 
-		for thread in current.threads:
-			print thread
+		for thread in threads:
+			status = str(thread[1]).split()[1].strip().lower()
+			print count,"->", thread[0], "::", status
+			if status=="stopped":
+				removeplz.append(threads[count])
+			count += 1
+			
 	except:
 		print "no current threads"
 	
+	for item in removeplz:
+		threads.remove(item)
+	print 
+	
+	count = 0
 	print "Processes \n--------------------"
 	try:
 		if len(processes) > 0:
 			for process in processes:
-				print type(process)
+				print count, "->", type(process)
+				count += 1
 		else:
 			print "no current processes"
 	except:
@@ -515,6 +591,7 @@ def help_command(command):
 			'help':'Lists general help',
 			'help <module>':'Help for module',
 			'help <command>':'Help for command',
+			'info':"Print info about Talos",
 			'list modules':'List available modules',
 			'list variables':'List current variables',
 			'list commands':'List module specific commands',
@@ -530,12 +607,22 @@ def help_command(command):
 			'invoke <filename> <optional::argv1> <optional::argv2> etc..':'Invoke the script <filename> with as many arguments as are specified in the script.',
 			'transcript':"Write your session history out to a file to be replayed as a script at a later date.",
 			'transcript !justprint!':"Print your session history to the screen",
+			'silence list':'List silenced modules',
+			'silence add':'Silence a module (stop notifications)',
+			'silence del':'Unsilence a module',			
+			'silence':"Mute or unmute module notifications",
+
+			'kill thread':"You can kill a thread by number.  If the module you're threading supports being killed in this way.  It might not.",
+			'purge db':'Purges the Talos db',
+			'purge db admin':'Purges the admin db',
+
 			'purge log':"Purge the notifications log",
 			'purge transcript':"Purge your session history"
 			}
 
 	if command in help_texts:
-		print help_texts[command]
+		print "--",str(command),"--"
+		print ">",help_texts[command]
 		return True
 	print "No such module or command"
 	return False
@@ -662,6 +749,21 @@ def read_tripcode(tripcode):
 			launch_bot(line.split(",")[1])
 
 
+def purge_db():
+	esse = essential()
+	esse.db_purge()
+	time.sleep(1)
+	esse.db_fill_tables()
+	print "Database purged"
+
+def purge_db_admin():
+        dba = dbadmin()
+        dba.db_purge()
+	time.sleep(1)
+	dba.db_fill_tables()
+	print "Admin database purged"
+
+
 def purge_transcript():
 	global transcript
 	transcript = []
@@ -737,8 +839,8 @@ def mon_log(log):
 			print "\nYou have received %s new notification%s" % (len(notifications) - bef, s)
 			print "%s total unread notifications" % (len(notifications))
 			sys.stdout.write( "command is: read notifications\n")
-			if not qu.comrunning:
-				sys.stdout.write( "%s>>> %s" % (module, readline.get_line_buffer()) )
+			#if not qu.comrunning:
+			#	sys.stdout.write( "%s>>> %s" % (module, readline.get_line_buffer()) )
 			sys.stdout.flush()		
 
 		time.sleep(120)
@@ -764,7 +866,8 @@ def comparse(com, module, current):
 		if DEBUG:
 			raise
 		else:
-			print "ERROR: Parse command.  To debug run with --debug switch."
+			print "ERROR: [%s]" % e
+		#	print "ERROR: Parse command.  To debug run talos.py with --debug switch."
 
 	out = str(lastout)
 	com = " ".join([com[0],out,com[2]])
@@ -821,6 +924,36 @@ def transcript_write(filename):
 	fi.close()
 	print 'Transcript written out to file: %s' % filename
 	return
+
+def purposefail():
+	raise Exception("Purposefail")
+
+def silence_list():
+	print "Tools Silenced"
+	print "--------------"
+	dba = dbadmin()
+	a = dba.db_exec("select tool from silence", passthrough=True)
+	for line in a:
+		print line[0]
+
+	
+def silence_add(tool):
+	dba = dbadmin()
+	dba.db_exec("insert into silence (tool) values (\"%s\")" % tool)
+	print "%s silenced" % tool
+
+def silence_del(tool):
+	dba = dbadmin()
+	dba.db_exec("delete from silence where tool=\"%s\"" % tool)
+	print "%s unsilenced" % tool
+
+
+def info():
+	for key in infostore.keys():
+		if type(infostore[key]) == list:
+			print key+":"+",".join(infostore[key])
+		else:
+			print key+":"+infostore[key]
 
 def update():
 	a,b = subprocess.Popen("git pull", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
@@ -940,10 +1073,64 @@ def parse_com(com, module, current):
 	if com[0] == "#":
 		return module
 
-	
+	#info
+	if com.strip().lower() == "info":
+		info()
+		return module	
+
+
+	#silence
+	if com.strip().lower() == "silence":
+		print "silence (list/add/del)?"
+
+	#silence list
+	if com.strip().lower() == "silence list":
+		silence_list()
+		return module
+
+	#silence add
+        if " ".join(com.strip().lower().split()[0:2]) == "silence add":
+		if len(com.strip().lower().split()) > 2:
+                	silence_add(" ".join(com.strip().lower().split()[2:]))
+		else:
+			print "Add what?"
+		return module
+
+	#silence del
+	if " ".join(com.strip().lower().split()[0:2]) == "silence del":
+		if len(com.strip().lower().split()) > 2:
+			silence_del(" ".join(com.strip().lower().split()[2:]))
+		else:
+			print "Del what?"
+		return module
+
 	#update
 	if com.strip().lower() == "update":
 		update()
+		return module
+
+
+	#purposefail
+	if com.strip().lower() == 'pureposefail' or com.strip().lower() == "purposefail":
+		pureposefail()
+		return module
+
+	#kill thread
+	if com.strip().lower() == "kill thread":
+		print "Kill which thread?"
+		return module
+
+	#kill thread <num>
+	if " ".join(com.strip().lower().split()[0:2]) == "kill thread" and len(com.strip().lower().split()) == 3:
+
+		try:
+			lltnum = int(com.strip().lower().split()[2])
+			print "Attempting to kill thread %s" % lltnum
+			print "If it doesn't die it may not yet support being killed."
+			print 
+			kill_thread(lltnum)
+		except:
+			print "Something went wrong.  Did you enter a valid thread number?"
 		return module
 
 
@@ -1028,7 +1215,7 @@ def parse_com(com, module, current):
 	#help module || help command
 	if len(com.strip().lower().split()) > 1 and com.strip().lower().split()[0] == "help":
 		if not help_module(com.strip().lower().split()[1]):
-			help_command(str(com.strip().lower().split()[1:]))
+			help_command(str(" ".join(com.strip().lower().split()[1:])))
 		return module
 
 	#invoke
@@ -1180,6 +1367,16 @@ def parse_com(com, module, current):
 		read_old()
 		return module
 
+	#purge db
+	if com.strip().lower() == "purge db":
+		purge_db()
+		return module
+
+	#purge db admin
+	if com.strip().lower() == "purge db admin":
+		purge_db_admin()
+		return module
+
 	#purge log
 	if com.strip().lower() == "purge log":
 		purge_log("notify.log")
@@ -1193,12 +1390,12 @@ def parse_com(com, module, current):
 	#query
 	if len(com.strip().lower().split()) > 1 and com.strip().lower().split()[0] == "query":
 		e = essential()
-		e.db_exec(com.strip().lower().split()[1])
+		e.db_exec(com.strip().lower().split()[1:])
 		return module
 
 	###parse commands
 	if not isinstance(current, str):
-		print current.__file__
+		#print current.__file__
 		if len(com.strip().lower().split()) < 2:
 			if com.strip().lower() in dir(current.commands):
 				temp = com_exec_picker(com.strip().lower(), current)
@@ -1215,21 +1412,21 @@ def parse_com(com, module, current):
 
 					com_exec_picker("run",current)
 				
-				print temp
+				#print temp
 				return module
 		elif len(com.strip().lower().split()) == 2 and com.strip().lower().split()[1] == "-j":
-			print 0.1
 			if com.strip().lower().split()[0] in dir(current.commands):
 				temp = com_exec_background(com.strip().lower().split()[0], current)
-				print temp
+				#print temp
 				return module
 		elif len(com.strip().lower().split()) == 2 and com.strip().lower().split()[1] == '-d':
 			print "Running in debug mode"
 			if com.strip().lower().split()[0] in dir(current.commands):
 				temp = com_exec_picker(com.strip().lower().split()[0], current, True)
-				print temp
+				#print temp
 				return module
 
+	print "No such command"
 	return module
 
 def inc(var):
@@ -1295,7 +1492,8 @@ def read_loop(filename="", doreturn=False, argv=None):
 				if DEBUG:
 					raise
 				else:
-					print "ERROR: Parse command.  To debug run with --debug switch"
+					print "ERROR: [%s]" % e
+					#print "ERROR: Parse command.  To debug run with --debug switch"
 
 			#goto line in script
 			if "|||" in module:
@@ -1336,7 +1534,8 @@ def read_loop(filename="", doreturn=False, argv=None):
 				raise
 
 			else:
-				print "ERROR: Parse command.  To debug run with --debug switch"
+				print "ERROR: [%s]" % e
+				#print "ERROR: Parse command.  To debug run with --debug switch"
 		
 		if module != module_history[-1] and module != "TALOS":
 			current = imp.load_source('%s' % module,'modules/%s' % (module))
@@ -1371,11 +1570,14 @@ if __name__ == "__main__":
 		check_updates()
 
 	
-	if args.debug:
+	if args.debug or conf.debug:
 		DEBUG = True
 
-	if args.no_transcript:
+	if args.no_transcript or conf.no_transcript:
 		log_transcript = False
+
+	if conf.script:
+		read_loop(conf.script)
 
 	if args.script:
 		targv=None

@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+from ipwhois import IPWhois
+from core.database import essential
+import pprint
+meta = {"author":"Vlad", "ported_by":"Vlad", "version": "1.0", "info": "Ip lookup"}
+
+variables = {"ip":["", "yes", "Ip to lookup"], "logdb":["no", "yes", "Logs result to database"]}
+
+class commands:
+	def __init__(self):
+		return
+	
+	@staticmethod
+	def run(variables, pt):
+		db = essential()
+		db.__init__
+		db.db_create_table("iplookup (data text NOT NULL);")
+		ip = variables["ip"][0]
+		obj = IPWhois(ip)
+		results = obj.lookup_rdap(depth = 1)
+		if(variables["logdb"][0] == "yes"):
+			db.db_exec("INSERT INTO iplookup (data) VALUES (%s);", results)
+		pprint.pprint(results)

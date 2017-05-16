@@ -972,6 +972,12 @@ def wait(sec):
 	time.sleep(int(sec))
 	return
 
+def clear_c():
+	try:
+		_exec.call("clear")
+	except:
+		print "shell error"
+
 def shell(com):
 	try:
 		_exec.call(com)
@@ -1173,6 +1179,11 @@ def parse_com(com, module, current):
         if len(com.strip().lower().split()) == 2 and com.strip().lower().split()[0] == "dec":
                 dec(com.strip().lower().split()[1])
                 return module
+
+	#clear
+	if com == "clear":
+		clear_c()
+		return module
 
 
 	#shell
